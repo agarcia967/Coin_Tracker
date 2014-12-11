@@ -1,10 +1,12 @@
 # Coin Tracker.py
 __author__ = "Anthony R. Garcia <agarcia967@hotmail.com>"
-__date__ = "10/20/2014"
-__version__ = "1.0"
+__date__ = "10/28/2014"
+__version__ = "2.0"
 __credits__ = None
 
 import os
+from coin_parsing import parseBillsLine
+from coin_parsing import parseCoinsLine
 
 FILENAME = "cointracker.ini"
 CENT_SYMBOL = u"\u00A2"
@@ -73,14 +75,14 @@ def readINIFile():
     print("Done.")
 
 def printValues():
-    print("\n  BILLS")
+    print("\n BILLS")
     print(" $100.00 - %d" %values[0][0])
     print(" $ 50.00 - %d" %values[0][1])
     print(" $ 20.00 - %d" %values[0][2])
     print(" $ 10.00 - %d" %values[0][3])
-    print(" $  5.00 - %d" %values[0][4])
-    print(" $  2.00 - %d" %values[0][5])
-    print(" $  1.00 - %d" %values[0][6])
+    print(" $ 5.00 - %d" %values[0][4])
+    print(" $ 2.00 - %d" %values[0][5])
+    print(" $ 1.00 - %d" %values[0][6])
     billsTotal = sum([values[0][0]*100,
                       values[0][1]*50,
                       values[0][2]*20,
@@ -89,9 +91,9 @@ def printValues():
                       values[0][5]*2,
                       values[0][6]*1])
     print("Bills Total: $%0.2f" %billsTotal)
-    print("\n  COINS")
+    print("\n COINS")
     print(" $1.00 - %3.0d" %values[1][0])
-    print("   50%s - %3.0d" %(CENT_SYMBOL,values[1][1]))
+    print(" 50%s - %3.0d" %(CENT_SYMBOL,values[1][1]))
     qR = values[1][2]//40
     dR = values[1][3]//50
     nR = values[1][4]//40
@@ -99,20 +101,19 @@ def printValues():
     e=""
     if(qR):
         e="(%s)" %qR
-    print("   25%s - %3.0d %s" %(CENT_SYMBOL,values[1][2],e))
-    
+        print(" 25%s - %3.0d %s" %(CENT_SYMBOL,values[1][2],e))
     e=""
     if(dR):
         e="(%s)" %dR
-    print("   10%s - %3.0d %s" %(CENT_SYMBOL,values[1][3],e))
+        print(" 10%s - %3.0d %s" %(CENT_SYMBOL,values[1][3],e))
     e=""
     if(nR):
         e="(%s)" %nR
-    print("    5%s - %3.0d %s" %(CENT_SYMBOL,values[1][4],e))
+        print(" 5%s - %3.0d %s" %(CENT_SYMBOL,values[1][4],e))
     e=""
     if(pR):
         e="(%s)" %pR
-    print("    1%s - %3.0d %s" %(CENT_SYMBOL,values[1][5],e))
+    print(" 1%s - %3.0d %s" %(CENT_SYMBOL,values[1][5],e))
     coinsTotal = sum([values[1][0]*1,
                       values[1][1]*.5,
                       values[1][2]*.25,
@@ -120,6 +121,7 @@ def printValues():
                       values[1][4]*.05,
                       values[1][5]*.01,])
     print("Coins Total: $%0.2f\n" %coinsTotal)
+    print("Total: $%0.2f\n" %currentValue())
 
 def calcDeposit():
     print("\nCalculating...")
@@ -136,11 +138,12 @@ def calcDeposit():
         print("[$2 bills omitted]")
     depositValue+=values[0][6] * 1
     billsOnly = depositValue
-
+    
     if(depositAll):
         depositValue+=values[1][0] *1.00
     else:
         print("[$1 coins omitted]")
+    
     if(depositAll):
         depositValue+=values[1][1] * .50
     else:
@@ -171,7 +174,7 @@ def makeDeposit():
     else:
         print("[$2 bills omitted]")
     values[0][6] = 0 #ones
-
+    
     if(depositAll):
         values[1][0] = 0 #dollar coins
     else:
@@ -196,7 +199,6 @@ def currentValue():
     totalValue+=values[0][4] * 5
     totalValue+=values[0][5] * 2
     totalValue+=values[0][6] * 1
-
     totalValue+=values[1][0] *1.00
     totalValue+=values[1][1] * .50
     totalValue+=values[1][2] * .25
@@ -247,40 +249,40 @@ def addMoney():
     print("\nAdd Bills & Coins\n-----------------\nType 'c' to cancel")
     counter = 0
     print("\nBILLS")
-    for item in KEYS[0]:
-        valid = 0
-        while(not(valid)):
-            try:
-                i = input("%s: "%item)
-                if(i==""):
-                    ValueError
-                elif(i[0].lower()=="c"):
-                    return
-                #i = int(i)
-                values[0][counter] += int(i)
-                changesMade = True
-                valid = 1
-            except ValueError:
-                print("Integers only!")
-                valid = 0
-        counter+=1
-    counter = 0
+    billsList = parseBillsLine()
+    if(billsList!=None):
+        z = 0
+        changesMade = True
+        while(z<len(values[0])):
+            values[0][z]+=billsList[z]
+            z+=1
+    else:
+        return
     print("\nCOINS")
-    for item in KEYS[1]:
-        valid = 0
-        while(not(valid)):
-            try:
-                i = input("%s: "%item)
-                if(i[0].lower()=="c"):
-                    return
-                #i = int(i)
-                values[1][counter] += int(i)
-                changesMade = True
-                valid = 1
-            except ValueError:
-                print("Integers only!")
-                valid = 0
-        counter+=1
+    coinsList = parseCoinsLine()
+    if(coinsList!=None):
+        changesMade = True
+        z = 0
+        while(z<len(values[1])):
+            values[1][z]+=coinsList[z]
+            z+=1
+    else:
+        while(True):
+            resp = input("Clear bills? (y/n) ")
+            if(len(resp)>0 and resp[0].lower()=="y"):
+                changesMade = False
+                z = 0
+                while(z<len(values[0])):
+                    values[0][z]-=billsList[z]
+                    z+=1
+                print("Bills cleared.")
+                return
+            elif(len(resp)>0 and resp[0].lower()=="n"):
+                print("Bills saved.")
+                return
+            else:
+                print("Please enter 'y' or 'n'.")
+        return
     return
 
 menu = ["Add Bills & Coins",
@@ -290,6 +292,7 @@ menu = ["Add Bills & Coins",
         "Make Deposit",
         "Reload file",
         "Save & Quit"]
+
 def menuMaker():
     counter = 1
     for item in menu:
@@ -313,7 +316,7 @@ def main():
                 if(not(changesMade)):
                     return
                 while(1==1):
-                    resp = input("Save changes? (y/n)")
+                    resp = input("Save changes? (y/n) ")
                     if(("yes" in resp.lower()) or ("y" in resp.lower())):
                         saveFile()
                         return
@@ -341,7 +344,7 @@ def main():
                 return
             else:
                 print("Please enter a number in range 0-%s" %len(menu))
-            input("Press ENTER to continue.")
+                input("Press ENTER to continue.")
         except ValueError:
             print("Please enter numbers only.")
             input("Press ENTER to continue.")
