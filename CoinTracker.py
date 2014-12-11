@@ -1,44 +1,197 @@
-# Coin Tracker.py
+# GUICoinTracker.py
 __author__ = "Anthony R. Garcia <agarcia967@hotmail.com>"
-__date__ = "11/07/2014"
-__version__ = "3.0" #now with dictionaries and tuples!
+__date__ = "11/11/2014"
+__version__ = "4.0" #now with a GUI using graphics.py
 __credits__ = None
 
+from graphics import GraphWin, Point, Text, Rectangle, Line, Entry
+from ticker import Ticker
+from flicker import Flicker
+from button import Button
 import os
 
-FILENAME = "cointracker.ini"
 CENT_SYMBOL = u"\u00A2"
-SECTIONS = ("bills","coins")
-BILLS = ("hundred","fifty","twenty","ten","five","two","one")
-COINS = ("dollar","halfdollar","quarter","dime","nickel","penny")
-billsCoins= {"hundred":0,"fifty":0,"twenty":0,"ten":0,"five":0,"two":0,"one":0,
-             "dollar":0,"halfdollar":0,"quarter":0,"dime":0,"nickel":0,"penny":0}
 changesMade = False
 
-def saveFile():
+def changesMadeTrue():
     global changesMade
-    print("Writing file '%s'. Please wait... " %FILENAME, end='')
-    outFile = open(FILENAME,'w')
-    outFile.write("#DO NOT move this file!\n")
-    sectionCounter = 0
-    for section in SECTIONS:
-        outFile.write("[%s]\n" %section.upper())
-        for key in billsCoins:
-            if(key in COINS and section=="coins"):
-                outFile.write("%s=%s\n" %(key,str(billsCoins[key])))
-            elif(key in BILLS and section=="bills"):
-                outFile.write("%s=%s\n" %(key,str(billsCoins[key])))
-        sectionCounter+=1
-    outFile.close()
-    print("Done.")
-    changesMade = False
+    changesMade = True
+    print("changesMade =",changesMade)
 
-def readINIFile(FILENAME="cointracker.ini"):
+def changesMadeFalse():
+    global changesMade
+    changesMade = False
+    print("changesMade =",changesMade)
+    
+def draw(elements,window):
+    for e in elements:
+        e.draw(window)
+
+def undraw(elements):
+    for e in elements:
+        e.undraw()
+
+def popup(win,prompt,positive_button_label,negative_button_label,neutral_button_label=None,is_input_type=False):
+    print("[UI] PopUp")
+    print("  '%s'" %prompt)
+    print("  T: '%s'" %positive_button_label)
+    if(neutral_button_label!=None):
+        print("  N: '%s'" %neutral_button_label)
+    print("  F: '%s'" %negative_button_label)
+    if type(prompt)==type([]):
+        list = prompt
+        prompt = ""
+        for i in list:
+            prompt+=i
+            if(list.index(i)<len(list)-1):
+                prompt+="\n"
+    winW, winH = win.getWidth(), win.getHeight()
+    elements = []
+    popT = winH*.30
+    popL = winW*.30
+    popB = winH*.70
+    popR = winW*.70
+    window = Rectangle(Point(popL,popT),Point(popR,popB))
+    window.setWidth(2)
+    window.setFill('lightblue')
+    elements.append(window)
+    
+    prpt = Text(Point((popL+popR)/2,(popT+popB)*.45),prompt)
+    elements.append(prpt)
+
+    autowidth = 9
+    bPositive = Button(Point((winW*.5+popR)*.5,(popT+popB)*.6), (len(positive_button_label)*autowidth), positive_button_label)
+    elements.append(bPositive)
+
+    if(is_input_type):
+        entry = Entry(Point(winW/2,winH/2), 20)
+        elements.append(entry)
+
+    if(neutral_button_label):
+        bNeutral = Button(Point((popL+popR)*.5,(popT+popB)*.6), (len(neutral_button_label)*autowidth), neutral_button_label)
+        elements.append(bNeutral)
+    
+    bNegative = Button(Point((popL+winW*.5)*.5,(popT+popB)*.6), (len(negative_button_label)*autowidth), negative_button_label)
+    elements.append(bNegative)
+    
+    draw(elements,win)
+    while True:
+        click = win.getMouse()
+        if(bPositive.clicked(click)):
+            undraw(elements)
+            print("[UI] '%s'" %positive_button_label)
+            if(is_input_type):
+                return entry.getText()
+            return True
+        elif(bNegative.clicked(click)):
+            undraw(elements)
+            print("[UI] '%s'" %negative_button_label)
+            return False
+        elif(neutral_button_label!=None and bNeutral.clicked(click)):
+            undraw(elements)
+            print("[UI] '%s'" %neutral_button_label)
+            return None
+
+def dictToTotalValue(dict):
+    mySum = 0
+    mySum+=dict['hundred'] * 100
+    mySum+=dict['fifty'] * 50
+    mySum+=dict['twenty'] * 20
+    mySum+=dict['ten'] * 10
+    mySum+=dict['five'] * 5
+    mySum+=dict['two'] * 2
+    mySum+=dict['one'] * 1
+    
+    mySum+=dict['dollar'] * 1
+    mySum+=dict['halfdollar'] * .50
+    mySum+=dict['quarter'] * .25
+    mySum+=dict['dime'] * .10
+    mySum+=dict['nickel'] * .05
+    mySum+=dict['penny'] * .01
+    return mySum
+
+def dictToBillValue(dict, inclMiscBills=False):
+    mySum = 0
+    mySum+=dict['hundred'] * 100
+    mySum+=dict['fifty'] * 50
+    mySum+=dict['twenty'] * 20
+    mySum+=dict['ten'] * 10
+    mySum+=dict['five'] * 5
+    if(inclMiscBills):
+        mySum+=dict['two'] * 2
+    mySum+=dict['one'] * 1
+    return mySum
+
+def dictToCoinValue(dict, inclMiscCoins=False):
+    mySum = 0
+    if(inclMiscCoins):
+        mySum+=dict['dollar'] * 1
+        mySum+=dict['halfdollar'] * .50
+    mySum+=dict['quarter'] * .25
+    mySum+=dict['dime'] * .10
+    mySum+=dict['nickel'] * .05
+    mySum+=dict['penny'] * .01
+    return mySum
+
+def dictToRollers(dict):
+    list = []
+    list.append(dict['quarter']//40)
+    list.append(dict['dime']//50)
+    list.append(dict['nickel']//40)
+    list.append(dict['penny']//50)
+    return list
+
+def deposit(dict,inclMiscBills,returnOnly=True):
+    mySum = 0
+    mySum+=dict['hundred'] * 100
+    mySum+=dict['fifty'] * 50
+    mySum+=dict['twenty'] * 20
+    mySum+=dict['ten'] * 10
+    mySum+=dict['five'] * 5
+    if(inclMiscBills):
+        mySum+=dict['two'] * 2
+        if not returnOnly:
+            dict['two'] = 0
+    mySum+=dict['one'] * 1
+    if not returnOnly:
+        dict['hundred'] = 0
+        dict['fifty'] = 0
+        dict['twenty'] = 0
+        dict['ten'] = 0
+        dict['five'] = 0
+        dict['one'] = 0
+    billSum = mySum
+
+    mySum+=(dict['quarter']//40) * 10
+    mySum+=(dict['dime']//50) * 5
+    mySum+=(dict['nickel']//40) * 2
+    mySum+=(dict['penny']//50) * .5
+    if not returnOnly:
+        dict['quarter']%=40
+        dict['dime']%=50
+        dict['nickel']%=40
+        dict['penny']%=50
+        changesMadeTrue()
+    return billSum, mySum
+
+def getDict(keys,values):
+    dictionary = {}
+    if(len(keys)!=len(values)):
+        return dictionary
+    for i in range(len(values)):
+        dictionary[keys[i]] = int(values[i].getEntry())
+    return dictionary
+
+def loadFile(FILENAME="cointracker.ini"):
+    SECTIONS = ("bills","coins")
+    BILLS = ("hundred","fifty","twenty","ten","five","two","one")
+    COINS = ("dollar","halfdollar","quarter","dime","nickel","penny")
+    
+    loadedDict = {}
     print("Reading file '%s'. Please wait... " %FILENAME, end='')
     if(not(os.path.exists(FILENAME))):
         print("File does not exist.")
-        saveFile()
-        return
+        return None
     inFile = open(FILENAME, "r")
     counter = 0
     currentSection = 0
@@ -56,336 +209,334 @@ def readINIFile(FILENAME="cointracker.ini"):
                 currentSection = (SECTIONS.index(section.lower()))
             else:
                 print("FILE READ ERROR\n::Invalid Section name:",section)
-                return
+                return False
         elif(line):
             ll = line.split("=")
             for item in ll:
                 ll[ll.index(item)] = item.strip()
             key = ll[0]
             value = int(ll[1])
-            if(key in billsCoins):
-                billsCoins[key] = value
-            else:
-                print("FILE READ ERROR\n::Invalid Key in Section %s: %s" %(SECTIONS[currentSection],key))
-                return
+            loadedDict[key] = value
         else:
             print("FILE READ ERROR\n::Unknown Error")
-            return
+            return False
     inFile.close()
     print("Done.")
+    return loadedDict
 
-def printValues():
-    print("\n  BILLS")
-    print(" $100.00 - %d" %billsCoins['hundred'])
-    print(" $ 50.00 - %d" %billsCoins['fifty'])
-    print(" $ 20.00 - %d" %billsCoins['twenty'])
-    print(" $ 10.00 - %d" %billsCoins['ten'])
-    print(" $  5.00 - %d" %billsCoins['five'])
-    print(" $  2.00 - %d" %billsCoins['two'])
-    print(" $  1.00 - %d" %billsCoins['one'])
-    billsTotal = sum([billsCoins['hundred']*100,
-                      billsCoins['twenty']*50,
-                      billsCoins['one']*20,
-                      billsCoins['ten']*10,
-                      billsCoins['five']*5,
-                      billsCoins['two']*2,
-                      billsCoins['one']*1])
-    print("Bills Total: $%0.2f" %billsTotal)
-    print("\n  COINS")
-    print(" $1.00 - %3.0d" %billsCoins['dollar'])
-    print("   50%s - %3.0d" %(CENT_SYMBOL,billsCoins['halfdollar']))
-    q = billsCoins['quarter']
-    d = billsCoins['dime']
-    n = billsCoins['nickel']
-    p = billsCoins['penny']
-    qR, dR, nR, pR = q//40, d//50, n//40, p//50
-    e=""
-    if(qR):
-        e="(%s)" %qR
-    print("   25%s - %3.0d %s" %(CENT_SYMBOL,q,e))
+def saveFile(dict):
+    SECTIONS = ("bills","coins")
+    BILLS = ("hundred","fifty","twenty","ten","five","two","one")
+    COINS = ("dollar","halfdollar","quarter","dime","nickel","penny")
+    FILENAME = 'cointracker.ini'
     
-    e=""
-    if(dR):
-        e="(%s)" %dR
-    print("   10%s - %3.0d %s" %(CENT_SYMBOL,d,e))
-    e=""
-    if(nR):
-        e="(%s)" %nR
-    print("    5%s - %3.0d %s" %(CENT_SYMBOL,n,e))
-    e=""
-    if(pR):
-        e="(%s)" %pR
-    print("    1%s - %3.0d %s" %(CENT_SYMBOL,p,e))
-    coinsTotal = sum([billsCoins['dollar']*1,
-                      billsCoins['halfdollar']*.5,
-                      q*.25, d*.10, n*.05, p*.01,])
-    print("Coins Total: $%0.2f\n" %coinsTotal)
+    print("Writing dict to file '%s'. Please wait... " %FILENAME, end='')
+    try:
+        outFile = open(FILENAME,'w')
+        outFile.write("#DO NOT move this file!\n")
+        sectionCounter = 0
+        for section in SECTIONS:
+            outFile.write("[%s]\n" %section.upper())
+            for key in dict:
+                if(key in COINS and section=="coins"):
+                    outFile.write("%s=%s\n" %(key,str(dict[key])))
+                elif(key in BILLS and section=="bills"):
+                    outFile.write("%s=%s\n" %(key,str(dict[key])))
+            sectionCounter+=1
+        outFile.close()
+        print("Done.")
+        return True
+    except Exception:
+        print("Error.\nUnknown Exception")
+        return False
 
-def calcDeposit():
-    print("\nCalculating...")
-    depositAll = False
-    depositValue = 0
-    depositValue+=billsCoins['hundred']*100
-    depositValue+=billsCoins['fifty'] *50
-    depositValue+=billsCoins['twenty'] *20
-    depositValue+=billsCoins['ten'] *10
-    depositValue+=billsCoins['five'] * 5
-    if(depositAll):
-        depositValue+=billsCoins['two'] * 2
-    else:
-        print("[$2 bills omitted]")
-    depositValue+=billsCoins['one'] * 1
-    billsOnly = depositValue
+def updateBCValue(value,textDisplay):
+    string = "$%7.2f" %value
+    textDisplay.setText(string)
 
-    if(depositAll):
-        depositValue+=billsCoins['dollar'] *1.00
-    else:
-        print("[$1 coins omitted]")
-    if(depositAll):
-        depositValue+=billsCoins['halfdollar'] * .50
-    else:
-        print("[50%s coins omitted]" %CENT_SYMBOL)
-    depositValue+=((billsCoins['quarter']//40)*10)
-    depositValue+=((billsCoins['dime']//50)*5)
-    depositValue+=((billsCoins['nickel']//40)*2)
-    depositValue+=((billsCoins['penny']//50)*.5)
-    print("Done.")
-    print("\nBills Only: $%0.2f" %billsOnly)
-    print("Deposit value: $%0.2f\n" %depositValue)
-    return depositValue
+def updateDollarValue(dict,textDisplay):
+    value = dictToTotalValue(dict)
+    string = "$%8.2f" %value
+    if(value>=1000):
+        textDisplay.setFill('red')
+        textDisplay.setStyle('bold')
+    elif(value>=800):
+        textDisplay.setFill('orange')
+        textDisplay.setStyle('bold')
+    elif(value>=500):
+        textDisplay.setFill('blue')
+        textDisplay.setStyle('bold')
+    textDisplay.setText(string)
 
-def makeDeposit():
-    global changesMade
-    calcDeposit()
-    resp=input("Are you sure you have or want to deposit\nthis amount to the bank? (y/n) ")
-    if(not(resp[0].lower()=="y")):
-        return
-    depositAll = 0
-    billsCoins['hundred'] = 0 #hundreds
-    billsCoins['fifty'] = 0 #fifties
-    billsCoins['twenty'] = 0 #twenties
-    billsCoins['ten'] = 0 #tens
-    billsCoins['five'] = 0 #fives
-    if(depositAll):
-        billsCoins['two'] = 0 #twos
-    else:
-        print("[$2 bills omitted]")
-    billsCoins['one'] = 0 #ones
+def updateRollers(intList,displaysList):
+    displaysList[0].setText(intList[0])#quarters
+    displaysList[1].setText(intList[1])#dimes
+    displaysList[2].setText(intList[2])#nickels
+    displaysList[3].setText(intList[3])#pennies
 
-    if(depositAll):
-        billsCoins['dollar'] = 0 #dollar coins
-    else:
-        print("[$1 coins omitted]")
-    if(depositAll):
-        billsCoins['halfdollar'] = 0 #fifty cent coins
-    else:
-        print("[50%s coins omitted]" %CENT_SYMBOL)
-    billsCoins['quarter'] = billsCoins['quarter'] % 40 #quarters
-    billsCoins['dime'] = billsCoins['dime'] % 50 #dimes
-    billsCoins['nickel'] = billsCoins['nickel'] % 40 #nickels
-    billsCoins['penny'] = billsCoins['penny'] % 50 #pennies
-    print("Deposited amounts removed from current values.")
-    changesMade = True
+def updateRollersValue(intList,textDisplay):
+    value = 0
+    value += intList[0]*10.00 #quarters
+    value += intList[1]* 5.00 #dimes
+    value += intList[2]* 2.00 #nickels
+    value += intList[3]* 0.50 #pennies
+    string = "$%5.2f" %value
+    textDisplay.setText(string)
 
-def currentValue():
-    totalValue = 0
-    totalValue+=billsCoins['hundred']*100
-    totalValue+=billsCoins['fifty'] *50
-    totalValue+=billsCoins['twenty'] *20
-    totalValue+=billsCoins['ten'] *10
-    totalValue+=billsCoins['five'] * 5
-    totalValue+=billsCoins['two'] * 2
-    totalValue+=billsCoins['one'] * 1
-
-    totalValue+=billsCoins['dollar'] *1.00
-    totalValue+=billsCoins['halfdollar'] * .50
-    totalValue+=billsCoins['quarter'] * .25
-    totalValue+=billsCoins['dime'] * .10
-    totalValue+=billsCoins['nickel'] * .05
-    totalValue+=billsCoins['penny'] * .01
-    return totalValue
-
-def coinRollers(isPrinter):
-    qRolls = billsCoins['quarter']//40
-    dRolls = billsCoins['dime']//50
-    nRolls = billsCoins['nickel']//40
-    pRolls = billsCoins['penny']//50
-    if(isPrinter):
-        if(sum([qRolls,dRolls,nRolls,pRolls])<1):
-            print("No coin rollers.")
-            return 0
-        if(qRolls>=1):
-            print("%s Quarter Roller" %int(qRolls), end='')
-            if(qRolls==1):
-                print("")
-            else:
-                print("s")
-        if(dRolls>=1):
-            print("%s Dime Roller" %int(dRolls), end='')
-            if(dRolls==1):
-                print("")
-            else:
-                print("s")
-        if(nRolls>=1):
-            print("%s Nickel Roller" %int(nRolls), end='')
-            if(nRolls==1):
-                print("")
-            else:
-                print("s")
-        if(pRolls>=1):
-            print("%s Penny Roller" %int(pRolls), end='')
-            if(pRolls==1):
-                print("")
-            else:
-                print("s")
-        print()
-    else:
-        return sum([qRolls,dRolls,nRolls,pRolls])
-
-def addMoney():
-    global changesMade
-    print("\nAdd Bills & Coins\n-----------------\nType 'c' to cancel")
-    counter = 0
-    print("\nBILLS")
-    for item in KEYS[0]:
-        valid = 0
-        while(not(valid)):
-            try:
-                i = input("%s: "%item)
-                if(i==""):
-                    ValueError
-                elif(i[0].lower()=="c"):
-                    return
-                #i = int(i)
-                values[0][counter] += int(i)
-                changesMade = True
-                valid = 1
-            except ValueError:
-                print("Integers only!")
-                valid = 0
-        counter+=1
-    counter = 0
-    print("\nCOINS")
-    for item in KEYS[1]:
-        valid = 0
-        while(not(valid)):
-            try:
-                i = input("%s: "%item)
-                if(i[0].lower()=="c"):
-                    return
-                #i = int(i)
-                values[1][counter] += int(i)
-                changesMade = True
-                valid = 1
-            except ValueError:
-                print("Integers only!")
-                valid = 0
-        counter+=1
-    billsList = parseBillsLine()
-    if(billsList!=None):
-        changesMade = True
-        billsCoins['hundred']+=billsList[0]
-        billsCoins['fifty']  +=billsList[1]
-        billsCoins['twenty'] +=billsList[2]
-        billsCoins['ten']    +=billsList[3]
-        billsCoins['five']   +=billsList[4]
-        billsCoins['two']    +=billsList[5]
-        billsCoins['one']    +=billsList[6]
-    else:
-        return
-    print("\nCOINS")
-    coinsList = parseCoinsLine()
-    if(coinsList!=None):
-        changesMade = True
-        billsCoins['dollar']    +=coinsList[0]
-        billsCoins['halfdollar']+=coinsList[1]
-        billsCoins['quarter']   +=coinsList[2]
-        billsCoins['dime']      +=coinsList[3]
-        billsCoins['nickel']    +=coinsList[4]
-        billsCoins['penny']     +=coinsList[5]
-    else:
-        while(True):
-            resp = input("Clear bills? (y/n) ")
-            if(len(resp)>0 and resp[0].lower()=="y"):
-                changesMade = False
-                billsCoins['hundred']-=billsList[0]
-                billsCoins['fifty']  -=billsList[1]
-                billsCoins['twenty'] -=billsList[2]
-                billsCoins['ten']    -=billsList[3]
-                billsCoins['five']   -=billsList[4]
-                billsCoins['two']    -=billsList[5]
-                billsCoins['one']    -=billsList[6]
-                print("Bills cleared.")
-                return
-            elif(len(resp)>0 and resp[0].lower()=="n"):
-                print("Bills saved.")
-                return
-            else:
-                print("Please enter 'y' or 'n'.")
-        return
-    return
-
-menu = ["Add Bills & Coins",
-        "Show Bills & Coins",
-        "See Coin rollers",
-        "Show Deposit",
-        "Make Deposit",
-        "Reload file",
-        "Save & Quit"]
-def menuMaker():
-    counter = 1
-    for item in menu:
-        print("%d -%s" %(counter,item))
-        counter+=1
-    print("0 -Quit")
+def updateTickers(dict,tickers):
+    for e in tickers:
+        #print(e.getLabel())
+        if(e.getLabel()=="$100"):
+            e.setEntry(dict['hundred'])
+        elif(e.getLabel()=="$50"):
+            e.setEntry(dict['fifty'])
+        elif(e.getLabel()=="$20"):
+            e.setEntry(dict['twenty'])
+        elif(e.getLabel()=="$10"):
+            e.setEntry(dict['ten'])
+        elif(e.getLabel()=="$5"):
+            e.setEntry(dict['five'])
+        elif(e.getLabel()=="$2"):
+            e.setEntry(dict['two'])
+        elif(e.getLabel()=="$1"):
+            e.setEntry(dict['one'])
+        elif(e.getLabel()=="$1.00"):
+            e.setEntry(dict['dollar'])
+        elif(e.getLabel()==("50%s"%CENT_SYMBOL)):
+            e.setEntry(dict['halfdollar'])
+        elif(e.getLabel()==("25%s"%CENT_SYMBOL)):
+            e.setEntry(dict['quarter'])
+        elif(e.getLabel()==("10%s"%CENT_SYMBOL)):
+            e.setEntry(dict['dime'])
+        elif(e.getLabel()==("5%s"%CENT_SYMBOL)):
+            e.setEntry(dict['nickel'])
+        elif(e.getLabel()==("1%s"%CENT_SYMBOL)):
+            e.setEntry(dict['penny'])
 
 def main():
-    global changesMade
-    readINIFile()
-    resp = 0
-    while(1==1):
-        total = currentValue()
-        print("\nCurrent Total: $%0.2f" %total)
-        if(coinRollers(0)):
-            print("<< There are coins to roll. >>")
-        try:
-            menuMaker()
-            resp = int(input("> "))
-            if(resp==0): #menu[0] "Quit"
-                if(not(changesMade)):
+    winW = 800
+    winH = 600
+    win = GraphWin("Coin Tracker", winW, winH)
+    win.setBackground('white')
+
+    BILLS = ("$100","$50","$20","$10","$5","$2","$1")
+    COINS = ("$1.00",("50%s"%CENT_SYMBOL),("25%s"%CENT_SYMBOL),("10%s"%CENT_SYMBOL),("5%s"%CENT_SYMBOL),("1%s"%CENT_SYMBOL))
+    TBILLS = ("hundred","fifty","twenty","ten","five","two","one")
+    TCOINS = ("dollar","halfdollar","quarter","dime","nickel","penny")
+
+    elements = []
+    buttonY = winH*.05
+    bSave = Button(Point(winW*.05,buttonY),50,"Save")
+    elements.append(bSave)
+    bLoad = Button(Point(winW*.15,buttonY),50,"Load")
+    elements.append(bLoad)
+    bDeposit = Button(Point(winW*.25,buttonY),60,"Deposit")
+    elements.append(bDeposit)
+    bQuit = Button(Point(winW*.95,buttonY),50,"Quit")
+    elements.append(bQuit)
+    SAVE_ANCHOR = Point(winW*.05,buttonY+30)
+    LOAD_ANCHOR = Point(winW*.15,buttonY+30)
+    DEPOSIT_ANCHOR = Point(winW*.25,buttonY+30)
+    
+    title = Text(Point(winW*.50,winH*.10),"Coin Tracker")
+    title.setStyle('bold italic')
+    title.setSize(20)
+    elements.append(title)
+    elements.append(Text(Point(winW*.44,winH*.15),"Value:"))
+    totalValueDisp = Text(Point(winW*.53,winH*.15),"0")
+    totalValueDisp.setFace('courier')
+    elements.append(totalValueDisp)
+
+    tickers = []
+    billsRow = winH*.50
+    coinsRow = winH*.66
+    for i in range(len(BILLS)):
+        t = Ticker(Point(100+55*i,billsRow),BILLS[i])
+        t.setMin(0)
+        tickers.append(t)
+    for i in range(len(COINS)):
+        t = Ticker(Point(100+55*i,coinsRow),COINS[i])
+        t.setMin(0)
+        tickers.append(t)
+    elements += tickers
+
+    flickers = []
+    fMiscBills = Flicker(Point(winW*.62,billsRow),False,"Misc Bills")
+    flickers.append(fMiscBills)
+
+    fMiscCoins = Flicker(Point(winW*.62,coinsRow),False,"Misc Coins")
+    flickers.append(fMiscCoins)
+    elements+=flickers
+    
+    elements.append(Text(Point(winW*.75,billsRow*.93),"Bills Total:"))
+    billsValueDisp = Text(Point(winW*.75,billsRow*1.01),"0")
+    billsValueDisp.setFace('courier')
+    elements.append(billsValueDisp)
+
+    elements.append(Text(Point(winW*.75,coinsRow*.95),"Coins Total:"))
+    coinsValueDisp = Text(Point(winW*.75,coinsRow*1.01),"0")
+    coinsValueDisp.setFace('courier')
+    elements.append(coinsValueDisp)
+
+    coinRollDisp = []
+    tableXL = winW*.68
+    tableXR = winW*.864
+    tableYT = winH*.15
+    tableYB = winH*.41
+    crTable = Rectangle(Point(tableXL,tableYT),Point(tableXR,tableYB))
+    coinRollDisp.append(crTable)
+    crTitle = Text(Point(winW*.77,winH*.18),"Coin Rollers")
+    crTitle.setStyle('bold')
+    coinRollDisp.append(crTitle)
+    for i in range(5):
+        coinRollDisp.append(Line(Point(tableXL,winH*.20+(25*i)),Point(tableXR,winH*.20+(25*i))))
+    coinRollDisp.append(Line(Point(winW*.79,tableYT+30),Point(winW*.79,tableYB)))
+
+    nameCol = winW*.73
+    numCol = winW*.83
+    topRow = winH*.22
+    rowSpcg = winH*.042
+    coinRollDisp.append(Text(Point(nameCol,topRow),"Quarters"))
+    qRolls = Text(Point(numCol,topRow),"0")
+    coinRollDisp.append(qRolls)
+    topRow+=rowSpcg
+    coinRollDisp.append(Text(Point(nameCol,topRow),"Dimes"))
+    dRolls = Text(Point(numCol,topRow),"0")
+    coinRollDisp.append(dRolls)
+    topRow+=rowSpcg
+    coinRollDisp.append(Text(Point(nameCol,topRow),"Nickels"))
+    nRolls = Text(Point(numCol,topRow),"0")
+    coinRollDisp.append(nRolls)
+    topRow+=rowSpcg
+    coinRollDisp.append(Text(Point(nameCol,topRow),"Pennies"))
+    pRolls = Text(Point(numCol,topRow),"0")
+    coinRollDisp.append(pRolls)
+    topRow+=rowSpcg
+    coinRollDisp.append(Text(Point(nameCol,topRow),"Total"))
+    rollersValueDisp = Text(Point(numCol,topRow),"0")
+    coinRollDisp.append(rollersValueDisp)
+    elements += coinRollDisp
+
+    draw(elements,win)
+
+    errorMsg = Text(LOAD_ANCHOR,"New Error Message")
+    errorMsg.setFill('red')
+    
+    mydict = {"hundred":0,"fifty":0,"twenty":0,"ten":0,"five":0,"two":0,"one":0,
+              "dollar":0,"halfdollar":0,"quarter":0,"dime":0,"nickel":0,"penny":0}
+    print("Initial file read:")
+    result = loadFile()
+    if result==None:
+        errorMsg.setText("File not found.")
+        errorMsg.draw(win)
+    elif(type(result)==type(mydict)):
+        errorMsg.setText("File read successful.")
+        errorMsg.setFill('green')
+        errorMsg.draw(win)
+        mydict = result
+        changesMadeFalse()
+    else:
+        errorMsg.setText("File read error.")
+        errorMsg.draw(win)
+        
+    while True:
+        updateTickers(mydict,tickers)
+        updateDollarValue(mydict,totalValueDisp)
+        updateBCValue(dictToBillValue(mydict,fMiscBills.getState()),billsValueDisp)
+        updateBCValue(dictToCoinValue(mydict,fMiscCoins.getState()),coinsValueDisp)
+        updateRollers(dictToRollers(mydict),[qRolls,dRolls,nRolls,pRolls])
+        updateRollersValue(dictToRollers(mydict),rollersValueDisp)
+        p = win.getMouse()
+        errorMsg.setFill('red')
+        errorMsg.undraw()
+
+        tickerFlag = False
+        for e in tickers:
+            tickerClickResult = e.clicked(p)
+            if(tickerFlag==False and tickerClickResult):
+                tickerFlag = True
+        if(tickerFlag):
+            mydict = getDict(TBILLS+TCOINS,tickers)
+            print("[UI] Ticker")
+            changesMadeTrue()
+        flickerFlag = False
+        for e in flickers:
+            flickerClickResult = e.clicked(p)
+            if(flickerFlag==False and flickerClickResult):
+                flickerFlag = True
+        if(flickerFlag):
+            print("[UI] Flicker")
+        
+        if(bQuit.clicked(p)):
+            print("[UI] Quit")
+            result = True
+            if(changesMade):
+                undraw(tickers)
+                result = popup(win,"Any unsaved changes will be lost.\nAre you sure you want to quit?","Quit","Cancel","Save & Quit")
+                draw(tickers,win)
+            if(result==None):
+                result = saveFile(mydict)
+                if not result:
+                    errorMsg.setText("File could not be saved.")
+                    errorMsg.anchor = SAVE_ANCHOR
+                    errorMsg.draw(win)
+                else:
+                    win.close()
                     return
-                while(1==1):
-                    resp = input("Save changes? (y/n)")
-                    if(("yes" in resp.lower()) or ("y" in resp.lower())):
-                        saveFile()
-                        return
-                    elif(("no" in resp.lower()) or ("n" in resp.lower())):
-                        return
-                    elif(("cancel" in resp.lower()) or ("c" in resp.lower())):
-                        break
-                    else:
-                        print("Please enter 'y' or 'n'.")
-                        input("Press ENTER to continue.")
-            elif(resp==1): #menu[1] "Add Bills & Coins"
-                addMoney()
-            elif(resp==2): #menu[2] "Show Bills & Coins"
-                printValues()
-            elif(resp==3): #menu[3] "See Coin rollers"
-                coinRollers(1)
-            elif(resp==4): #menu[4] "Show Deposit"
-                calcDeposit()
-            elif(resp==5): #menu[5] "Make Deposit"
-                makeDeposit()
-            elif(resp==6): #menu[6] "Reload file"
-                readINIFile('myfile.txt')
-            elif(resp==7): #menu[7] "Save & Quit"
-                saveFile()
+            elif(result):
+                win.close()
                 return
+        elif(bSave.clicked(p)):
+            print("[UI] Save")
+            result = saveFile(mydict)
+            if result:
+                errorMsg.anchor = SAVE_ANCHOR
+                errorMsg.setFill('green')
+                errorMsg.setText("Saved!")
+                errorMsg.draw(win)
+                changesMadeFalse()
             else:
-                print("Please enter a number in range 0-%s" %len(menu))
-            input("Press ENTER to continue.")
-        except ValueError:
-            print("Please enter numbers only.")
-            input("Press ENTER to continue.")
+                errorMsg.anchor = SAVE_ANCHOR
+                errorMsg.setText("File could not be saved.")
+                errorMsg.draw(win)
+        elif(bDeposit.clicked(p)):
+            print("[UI] Deposit")
+            undraw(tickers)
+            bills,total = deposit(mydict,fMiscBills.getState(),True)
+            result = popup(win,"Are you sure you want to make a deposit?\nBills: $%0.2f\nCoins: $%0.2f\nTotal: $%0.2f"%(bills,total-bills,total)," Yes "," No ")
+            draw(tickers,win)
+            if(result):
+                bills,total = deposit(mydict,fMiscBills.getState())
+                print(bills,total)
+                errorMsg.anchor = DEPOSIT_ANCHOR
+                errorMsg.setFill('green')
+                errorMsg.setText("Deposit complete.")
+                errorMsg.draw(win)
+                changesMadeTrue()
+        elif(bLoad.clicked(p)):
+            print("[UI] Load")
+            undraw(tickers)
+            result = popup(win, "What file would you like to load?", " OK ", "Cancel", is_input_type=True)
+            draw(tickers,win)
+            if(type(result)==type("")):
+                filename = result
+                result = loadFile(filename)
+                if result==None:
+                    errorMsg.anchor = LOAD_ANCHOR
+                    errorMsg.setText("File not found.")
+                    errorMsg.draw(win)
+                elif(type(result)==type(mydict)):
+                    errorMsg.anchor = LOAD_ANCHOR
+                    errorMsg.setText("File read successful.")
+                    errorMsg.setFill('green')
+                    errorMsg.draw(win)
+                    mydict = result
+                    changesMadeTrue()
+                else:
+                    errorMsg.anchor = LOAD_ANCHOR
+                    errorMsg.setText("File read error.")
+                    errorMsg.draw(win)
+        else:
+            mydict = getDict(TBILLS+TCOINS,tickers)
 
 main()
